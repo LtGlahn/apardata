@@ -64,6 +64,25 @@ def lagStedfesting( row ):
 
     return stedfest 
 
+def hentFeltPunkt( stedfesting ): 
+    """
+    Henter kjørefelt for stedfesting som kommaseparert tekst 
+    """
+    pos, vid = stedfesting.split( '@' )
+    pos = float( pos )
+    
+    r = requests.get( 'https://nvdbapiles-v3.atlas.vegvesen.no/vegnett/veglenkesekvenser/segmentert/' + \
+                    vid + '.json' )
+    feltoversikt = ''
+    if r.ok: 
+        mydf = pd.DataFrame( r.json())
+        mydf2 = mydf[ (mydf['startposisjon'] <= pos) & (mydf['sluttposisjon'] > pos) ]
+        assert len( mydf2 ) == 1, "Skal ha kun ett svar på dette filteret"
+        if isinstance( mydf2.iloc[0]['feltoversikt'] , list ): 
+            feltoversikt = ','.join( mydf2.iloc[0]['feltoversikt'] ) 
+    
+    return feltoversikt 
+
 def tellAparFelt( row, apardata ) -> int: 
     """
     Teller hvor mange apar-oppføringer (dvs antall kjørefelt-oppføringer fra APAR) som matcher en NVDB bomstasjon
@@ -157,15 +176,18 @@ if __name__ == '__main__':
     # Fjerner duplikater
     apardata.drop_duplicates( subset='tollStationKey', inplace=True )
 
-    apardata['lat'] = apardata['positionY'].apply( lambda x : float(x) if x and len(x) > 3 else np.nan )
-    apardata['lon'] = apardata['positionX'].apply( lambda x : float(x) if x and len(x) > 3 else np.nan )
+    apardata['lat'] = apardata['positionY'].apply( lambda x : float(x) if x and len(x.strip()) > 3 else np.nan )
+    apardata['lon'] = apardata['positionX'].apply( lambda x : float(x) if x and len(x.strip()) > 3 else np.nan )
     # apardata['APAR takst liten bil'] = apardata.apply( finnTakst, axis=1 )
 
     # nvdbJson = nvdbapiv3.nvdbFagdata(45).to_records() 
     # with open( 'nvdbdump.json', 'w') as f: 
     #     json.dump( nvdbJson, f, indent=4, ensure_ascii=False )
-    # nvdbAlle = pd.DataFrame( nvdbapiv3.nvdbFagdata(45).to_records( relasjoner=False ) )
-    nvdbAlle = pd.read_excel( 'nvdbBomst.xlsx' )
+    nvdbAlle = pd.DataFrame( nvdbapiv3.nvdbFagdata(45).to_records( relasjoner=False ) )
+    nvdbAlle['stedfest'] = nvdbAlle['relativPosisjon'].astype(str) + '@' + nvdbAlle['veglenkesekvensid'].astype(str)
+    nvdbAlle['tilgjengeligeKjfelt'] = nvdbAlle['stedfest'].apply( hentFeltPunkt )
+
+    # nvdbAlle = pd.read_excel( 'nvdbBomst.xlsx' )
 
     # with open( 'nvdbdump.json') as f:
         # nvdbJson = json.load( f )
@@ -356,10 +378,17 @@ if __name__ == '__main__':
                      'projectName'          : row['projectName'], 
                      'tollStationCode'      : row['tollStationCode'], 
                     }
-            X, Y  = trans.transform( float( row['positionY']), float( row['positionX'] ) )
-            Y += count
-            data['geometry'] = Point( X, Y)
+            # Henter geometri - enten fra APAR eller fra NVDB
+            if row['positionX'] and len( row['positionX'].strip() ) > 3:
+                X, Y  = trans.transform( float( row['positionY']), float( row['positionX'] ) )
+                Y += count
+                data['geometry'] = Point( X, Y)
+            else:
+                print(f"Mangler geometri for APAR-oppføring {data['tollStationName']} {data['tollStationKey']} ")
+                data['geometry'] = wkt.loads( nvdb.iloc[0]['geometri'] ) 
+
             myList.append( data )
+
 
     aparRediger = pd.DataFrame( myList )
     aparRediger = gpd.GeoDataFrame( aparRediger, geometry='geometry', crs=25833 )
