@@ -364,6 +364,8 @@ if __name__ == '__main__':
             nvdbId = -1 
             navn  = f"Flere NVDB bomstasjoner: {','.join( nvdb['Navn bomstasjon'].to_list() )}"
 
+        print( f"Analyserer NVDB bomstasjoner: {navn}")
+
         count = 0
         for junk, row in temp2.iterrows():
             count += 1
