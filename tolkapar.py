@@ -329,11 +329,18 @@ if __name__ == '__main__':
                           'Innkrevningsretning',  'stedfesting_felt', 'tilgjengeligeKjfelt',  'stedfesting QA', 'Antall APAR felt', 
                         'segmentretning',   'kommune',
                         'vref', 'vegkart lenke' ]
+    
+    takstavvik = merged[ merged['Takst liten bil'] != merged['APAR takst liten bil'] ]
+
+    takstavvik_geom = takstavvik.copy()
+    takstavvik_geom['geometry'] = takstavvik_geom['geometri'].apply( wkt.loads )
+    takstavvik_geom = gpd.GeoDataFrame( takstavvik_geom, geometry='geometry' )
+    takstavvik_geom[ mergedcols + ['geometry'] ].to_file( 'takstavvik.gpkg')
 
 
     nvdbgeotricks.skrivexcel( 'koblingNvdbAutopass.xlsx', 
-                          [ merged[mergedcols], flere, apar_utenkobling_medpris[aparcols], nvdb_utenkobling[nvdbCol],  apar_utenpris[aparcols], nvdbBomst[stedfestingQAcol] ], 
-        sheet_nameListe = ['Enkel kobling', 'Flertydig kobling', 'APAR uten kobling', 'Nvdb uten kobling', 'inaktive Apar', 'NVDB stedfesting QA'] )
+                          [ merged[mergedcols], flere, apar_utenkobling_medpris[aparcols], nvdb_utenkobling[nvdbCol],  apar_utenpris[aparcols], nvdbBomst[stedfestingQAcol], takstavvik[mergedcols] ], 
+        sheet_nameListe = ['Enkel kobling', 'Flertydig kobling', 'APAR uten kobling', 'Nvdb uten kobling', 'inaktive Apar', 'NVDB stedfesting QA', 'Takst avvik'] )
     
 
     betalingskolonne = [ 'smallVehicle',
