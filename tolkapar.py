@@ -169,7 +169,8 @@ def finnAparTakst2nvdbData( row, apardata, takstType={ 'vehicle' : 'smallVehicle
     return pris
 
 if __name__ == '__main__': 
-    with open( 'apardump.json') as f: 
+    # with open( 'apardump.json') as f: 
+    with open( 'takstendringMai2024/endret_bomstasjoner_sisteuker20240527.json') as f: 
         apardump = json.load( f )
     apardata = pd.DataFrame( apardump )
 
