@@ -8,9 +8,10 @@ import geopandas as gpd
 from shapely.geometry import Point
 from shapely import wkt 
 
-if not [ k for k in sys.path if 'nvdbapi' in k]:
-    print( "Adding NVDB api library to python search path")
-    sys.path.append( '/mnt/c/data/leveranser/nvdbapi-V3' )
+import STARTHER
+# if not [ k for k in sys.path if 'nvdbapi' in k]:
+#     print( "Adding NVDB api library to python search path")
+#     sys.path.append( '/mnt/c/data/leveranser/nvdbapi-V3' )
 import nvdbapiv3 
 
 with open( 'SECRET.json' ) as f: 
