@@ -2,6 +2,7 @@ import requests
 import json
 import sys
 from datetime import datetime
+import ipdb 
 
 import numpy as np 
 import pandas as pd
@@ -11,9 +12,11 @@ from shapely import wkt
 from pyproj import Transformer
 from shapely import wkb, wkt
 
-if not [ k for k in sys.path if 'nvdbapi' in k]:
-    print( "Adding NVDB api library to python search path")
-    sys.path.append( '/mnt/c/data/leveranser/nvdbapi-V3' )
+import STARTHER
+ 
+# if not [ k for k in sys.path if 'nvdbapi' in k]:
+#     print( "Adding NVDB api library to python search path")
+#     sys.path.append( '/mnt/c/data/leveranser/nvdbapi-V3' )
 import nvdbapiv3 
 import nvdbgeotricks
 
@@ -150,27 +153,27 @@ def finnTakst( row, takstType={ 'vehicle' : 'smallVehicle', 'priceType' : 'price
 
     return pris
 
-def finnAparTakst2nvdbData( row, apardata, takstType={ 'vehicle' : 'smallVehicle', 'priceType' : 'priceNoRebate' } ) -> float: 
+def finnAparTakst2nvdbData( nvdbrow, apardata, takstType={ 'vehicle' : 'smallVehicle', 'priceType' : 'priceNoRebate' } ) -> float: 
     """
     Bruker funksjonen finntakst for å finne APAR-pris som matcher NVDB bomstasjon 
     """
 
     pris = np.nan
-    aparmatch = apardata[ (row['Operatør_Id'] == apardata['operatorId']) |  (row['Bomstasjon_Id'] == apardata['tollStationCode'])]
+    aparmatch = apardata[ (nvdbrow['Operatør_Id'] == apardata['operatorId']) & (nvdbrow['Bomstasjon_Id'] == apardata['tollStationCode'])]
     priser = set()
     for junk, row in aparmatch.iterrows(): 
         priser.add( finnTakst( aparmatch.iloc[0], takstType=takstType ))
 
     if len( priser ) > 1: 
-        print( f"{row['nvdbId']} {row['Navn bomstasjon']} operator={row['Operatør_Id']} key={row['Bomstasjon_Id']} har {len(priser)} prisoppføringer i APAR ")
+        print( f"{nvdbrow['nvdbId']} {nvdbrow['Navn bomstasjon']} operator={nvdbrow['Operatør_Id']} key={nvdbrow['Bomstasjon_Id']} har {len(priser)} prisoppføringer i APAR ")
     elif len( priser ) == 1: 
         pris = list( priser)[0]
 
     return pris
 
 if __name__ == '__main__': 
-    # with open( 'apardump.json') as f: 
-    with open( 'takstendringMai2024/endret_bomstasjoner_sisteuker20240527.json') as f: 
+    with open( 'apardump.json') as f: 
+    # with open( 'takstendringMai2024/endret_bomstasjoner_sisteuker20240527.json') as f: 
         apardump = json.load( f )
     apardata = pd.DataFrame( apardump )
 
@@ -199,10 +202,13 @@ if __name__ == '__main__':
     nvdbAlle['vegkart lenke'] = vegkartURL + nvdbAlle['nvdbId'].astype( 'str') + ':45' 
 
     nvdbBomst = nvdbAlle.copy()
-    nvdbBomst['stedfesting QA'] = nvdbAlle.apply( vurderStedfest, axis=1 )
-    nvdbBomst[ 'Antall APAR felt'] = nvdbAlle.apply( lambda row: tellAparFelt(row, apardata), axis=1)
-    nvdbBomst['APAR takst liten bil'] = nvdbBomst.apply( lambda row: finnAparTakst2nvdbData( row, apardata ), axis=1 )
-    nvdbBomst['APAR takst stor bensinbil'] = nvdbBomst.apply( lambda row: finnAparTakst2nvdbData( row, apardata, takstType={'vehicle' : 'largePetrol', 'priceType' : 'priceNoRebate' } ), axis=1 )
+    nvdbBomst['stedfesting QA']                     = nvdbAlle.apply( vurderStedfest, axis=1 )
+    nvdbBomst[ 'Antall APAR felt']                  = nvdbAlle.apply( lambda row: tellAparFelt(row, apardata), axis=1)
+
+    nvdbBomst['APAR takst liten bil']               = nvdbBomst.apply( lambda row: finnAparTakst2nvdbData( row, apardata, takstType={'vehicle' : 'smallVehicle', 'priceType' : 'priceNoRebate' } ), axis=1 )
+    nvdbBomst['APAR Rustid takst liten bil']        = nvdbBomst.apply( lambda row: finnAparTakst2nvdbData( row, apardata, takstType={'vehicle' : 'smallVehicle', 'priceType' : 'priceRushHourNoRebate' } ), axis=1 )
+    nvdbBomst['APAR takst stor bensinbil']          = nvdbBomst.apply( lambda row: finnAparTakst2nvdbData( row, apardata, takstType={'vehicle' : 'largePetrol', 'priceType' : 'priceNoRebate' } ), axis=1 )
+    nvdbBomst['APAR Rustid takst stor bensinbil']   = nvdbBomst.apply( lambda row: finnAparTakst2nvdbData( row, apardata, takstType={'vehicle' : 'largePetrol', 'priceType' : 'priceRushHourNoRebate' } ), axis=1 )
 
     # Hvilke NVDB-bomstasjoner mangler operatør ID og Bomstasjon ID? 
     nvdb_uten_autopasskobling = nvdbBomst[ (nvdbBomst['Operatør_Id'].isnull() ) | (nvdbBomst['Bomstasjon_Id'].isnull() )]
@@ -269,7 +275,12 @@ if __name__ == '__main__':
 
     # Disse koblingene er vi skråsikre på
     mergedcols = [ 'operatorId', 'operatorName', 'tollStationKey', 'tollStationCode',
-       'tollStationName', 'tollStationLane', 'tollStationDirection', 'APAR takst liten bil', 'Takst liten bil',  'nvdbId',
+       'tollStationName', 'tollStationLane', 'tollStationDirection', 
+       'APAR takst liten bil', 'Takst liten bil', 
+        'APAR Rustid takst liten bil', 'Rushtidstakst liten bil', 
+        'APAR takst stor bensinbil', 'Takst stor bil',
+        'APAR Rustid takst stor bensinbil', 'Rushtidstakst stor bil',
+         'nvdbId',
        'Innkrevningsretning',  'stedfesting_felt', 'tilgjengeligeKjfelt',  'stedfesting QA', 'Antall APAR felt', 
         'segmentretning',  'Navn bompengeanlegg (fra CS)',  'Navn bomstasjon',  'kommune',
         'vref', 'vegkart lenke' ]
@@ -331,7 +342,17 @@ if __name__ == '__main__':
                         'segmentretning',   'kommune',
                         'vref', 'vegkart lenke' ]
     
-    takstavvik = merged[ merged['Takst liten bil'] != merged['APAR takst liten bil'] ]
+
+    takstCol = [ 'Takst liten bil', 'Takst stor bil', 'Rushtidstakst liten bil', 'Rushtidstakst stor bil',         
+                    'APAR takst liten bil', 'APAR takst stor bensinbil',  
+                    'APAR Rustid takst liten bil', 'APAR Rustid takst stor bensinbil' ]
+    for myCol in takstCol: 
+        merged[myCol] = merged[myCol].fillna( 0 )
+
+    takstavvik = merged[ (merged['Takst liten bil']         != merged['APAR takst liten bil']             ) | \
+                         (merged['Rushtidstakst liten bil'] != merged['APAR Rustid takst liten bil']      ) | \
+                         (merged['Takst stor bil']          != merged['APAR takst stor bensinbil']        ) | \
+                         (merged['Rushtidstakst stor bil']  != merged['APAR Rustid takst stor bensinbil'] )   ]
 
     takstavvik_geom = takstavvik.copy()
     takstavvik_geom['geometry'] = takstavvik_geom['geometri'].apply( wkt.loads )
