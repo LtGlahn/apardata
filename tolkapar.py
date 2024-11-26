@@ -3,6 +3,7 @@ import json
 import sys
 from datetime import datetime
 import ipdb 
+from copy import deepcopy
 
 import numpy as np 
 import pandas as pd
@@ -13,11 +14,12 @@ from pyproj import Transformer
 from shapely import wkb, wkt
 
 import STARTHER
- 
+
 # if not [ k for k in sys.path if 'nvdbapi' in k]:
 #     print( "Adding NVDB api library to python search path")
 #     sys.path.append( '/mnt/c/data/leveranser/nvdbapi-V3' )
 import nvdbapiv3 
+import skrivnvdb
 import nvdbgeotricks
 
 def lagStedfesting( row ): 
@@ -171,7 +173,68 @@ def finnAparTakst2nvdbData( nvdbrow, apardata, takstType={ 'vehicle' : 'smallVeh
 
     return pris
 
-if __name__ == '__main__': 
+def lagEndringssett( myDataFrame, outfile='bomstasjon_endringssett.json' ):
+    """
+    Komponerer endringsett til NVDB api SKRIV basert på dataframe som har sammenstilt APAR og NVDB data 
+
+    Forutsetter at det kun finnes EN takstverdi per NVDB objekt. 
+    """ 
+
+    takstmatch = {               'APAR takst liten bil' : { 'navn' : 'Takst liten bil', 'id' : 1820 }, 
+                            'APAR takst stor bensinbil' : { 'navn' : 'Takst stor bil',   'id' : 1819 }, 
+                        'APAR Rustid takst liten bil'   : { 'navn' :  'Rushtidstakst liten bil', 'id' : 9410 }, 
+                   'APAR Rustid takst stor bensinbil'   : { 'navn' : 'Rushtidstakst stor bil', 'id' : 9411} }
+
+    egenskap_mal =  {  "typeId": -1, "verdi": [ ], "operasjon": "oppdater" }
+    delvisOppdater = []
+
+    for nvdbId in myDataFrame['nvdbId'].unique(): 
+        subset = myDataFrame[ myDataFrame['nvdbId'] == nvdbId].iloc[0]
+        endrede_egenskaper = []
+        #   |=apar |=nvdb   
+        for myKey, myVal in takstmatch.items(): # Sammenligner APAR takster med nvdb takster 
+            if subset[myKey] > 0 and subset[myKey] != subset[myVal['navn']]: 
+                nyEgenskap = deepcopy ( egenskap_mal )
+                nyEgenskap['typeId'] = myVal['id']
+                nyEgenskap['verdi'] = [ str( round( subset[myKey], 2 )) ]
+                endrede_egenskaper.append( nyEgenskap )
+
+        # Sjekker om vi har rushtidtakst - i så fall skal vi ha Tidsvariabel takst == Ja
+        # Evt motsatt: Ingen rushtid => tidsvariabel takst == Nei
+        nyEgenskap = deepcopy( egenskap_mal)
+        nyEgenskap['typeId'] = 9409
+        if subset['APAR Rustid takst liten bil'] > 0 and subset['Tidsdifferensiert takst'] == 'Nei':
+            nyEgenskap['verdi'] = [ 'Ja' ]
+            endrede_egenskaper.append( nyEgenskap )
+        elif subset['APAR Rustid takst liten bil'] == 0 and subset['Tidsdifferensiert takst'] == 'Ja':
+            nyEgenskap['verdi'] = [ 'Nei' ]
+            endrede_egenskaper.append( nyEgenskap )
+
+        if len( endrede_egenskaper ) > 0:
+            oppdaterObj = {  "gyldighetsperiode": { "startdato": datetime.now().isoformat()[0:10] },
+                        "typeId" : 45,
+                        "nvdbId" : int( subset['nvdbId']),
+                        "versjon" : int( subset['versjon']),
+                        "egenskaper" : deepcopy( endrede_egenskaper )
+            }
+            delvisOppdater.append( oppdaterObj )
+
+
+    if len( delvisOppdater ) > 0: 
+        skrivemal =  skrivnvdb.endringssett_mal()
+        skrivemal['delvisOppdater']['vegobjekter'] = delvisOppdater
+        with open( outfile, 'w') as f: 
+            json.dump( skrivemal, f, indent=4, ensure_ascii=False )       
+
+
+#    takstCol = [ 'Takst liten bil', 'Takst stor bil', 'Rushtidstakst liten bil', 'Rushtidstakst stor bil',         
+#                     'APAR takst liten bil', 'APAR takst stor bensinbil',  
+#                     'APAR Rustid takst liten bil', 'APAR Rustid takst stor bensinbil' ]
+
+
+
+if __name__ == '__main__':
+    t0 = datetime.now() 
     with open( 'apardump.json') as f: 
     # with open( 'takstendringMai2024/endret_bomstasjoner_sisteuker20240527.json') as f: 
         apardump = json.load( f )
@@ -321,8 +384,6 @@ if __name__ == '__main__':
     # Av disse APAR-stasjonene som mangler NVDB-kobling, hvem har aktiv prisinformasjon? 
     apar_utenkobling_medpris = apar_uten_kobling[ ~apar_uten_kobling['smallVehicle'].isnull() ]
 
-
-
     # Hvilke NVDB-bomstasjoner mangler kobling til APAR? 
     nvdb_koblede = list( merged['nvdbId'].unique() ) + list( flertydig['nvdbId'].unique() )    
     nvdb_utenkobling = nvdbAlle[ ~nvdbAlle['nvdbId'].isin( nvdb_koblede )]
@@ -381,7 +442,6 @@ if __name__ == '__main__':
     for key in list( temp['_myKey'].unique()):
         temp2 = temp[ temp['_myKey'] == key]
         nvdb = nvdbAlle[ (nvdbAlle['Operatør_Id'] == temp2.iloc[0]['operatorId'] ) & (nvdbAlle['Bomstasjon_Id'] == temp2.iloc[0]['tollStationCode'] ) ]
-
 
         if len( nvdb ) == 0: 
             nvdbId = -999
@@ -456,3 +516,8 @@ if __name__ == '__main__':
     
     nvdbBomst2[ nvdbCol2 ].to_file( 'nyApardump.gpkg', layer='nvdb bomstasjon', driver='GPKG')
     aparRediger[ aparCol2].to_file( 'nyApardump.gpkg', layer='apar bomstasjon felt', driver='GPKG')
+
+    # Sammenligner takster til sist
+
+    lagEndringssett( merged, outfile='bomstasjon_endringssett.json' )
+    print( f"Tidsbruk: {datetime.now()-t0}")
