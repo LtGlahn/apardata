@@ -235,7 +235,11 @@ def lagEndringssett( myDataFrame, outfile='bomstasjon_endringssett.json' ):
 
 if __name__ == '__main__':
     t0 = datetime.now() 
-    with open( 'apardump.json') as f: 
+
+    mappe = './' 
+    mappe = '/var/www/html/apardata/' 
+
+    with open(  mappe +  'apardump.json') as f: 
     # with open( 'takstendringMai2024/endret_bomstasjoner_sisteuker20240527.json') as f: 
         apardump = json.load( f )
     apardata = pd.DataFrame( apardump )
@@ -334,7 +338,7 @@ if __name__ == '__main__':
        # 'APAR takst liten bil', 'Takst liten bil', 
         'vref', 'geomavstand_nvdb_autopass',  'Antall APAR felt', 'stedfesting QA', 'geometry']
 
-    # geometrikontroll[geomcols].to_file( 'aparkontroll.gpkg', layer='geometrikontroll_enkel_juni', driver='GPKG')
+    # geometrikontroll[geomcols].to_file( mappe +  'aparkontroll.gpkg', layer='geometrikontroll_enkel_juni', driver='GPKG')
 
     # Disse koblingene er vi skråsikre på
     mergedcols = [ 'operatorId', 'operatorName', 'tollStationKey', 'tollStationCode',
@@ -347,13 +351,13 @@ if __name__ == '__main__':
        'Innkrevningsretning',  'stedfesting_felt', 'tilgjengeligeKjfelt',  'stedfesting QA', 'Antall APAR felt', 
         'segmentretning',  'Navn bompengeanlegg (fra CS)',  'Navn bomstasjon',  'kommune',
         'vref', 'vegkart lenke' ]
-    # nvdbgeotricks.skrivexcel( 'enkelNVDBkobling.xlsx',  merged[ mergedcols] )
+    # nvdbgeotricks.skrivexcel( mappe + 'enkelNVDBkobling.xlsx',  merged[ mergedcols] )
 
     # Mer avansert flertydig kobling 
     flertydig = pd.merge(  apardata, nvdb_duplikatId, left_on=[ 'operatorId', 'tollStationCode' ], right_on=['Operatør_Id', 'Bomstasjon_Id'], how='inner'  )
     flertydig['geometry'] = flertydig['geometri'].apply( wkt.loads )
     flertydig = gpd.GeoDataFrame( flertydig, geometry='geometry', crs=5973 )
-    # flertydig[ mergedcols + ['geometry'] ].to_file( 'aparkontroll.gpkg', layer='flertydigkobling', driver='GPKG')
+    # flertydig[ mergedcols + ['geometry'] ].to_file( mappe + 'aparkontroll.gpkg', layer='flertydigkobling', driver='GPKG')
 
     flere = flertydig.groupby( ['operatorId', 'tollStationCode'] ).agg( { 'tollStationName' : 'unique',  'nvdbId' : 'unique', 
                                                                 'tollStationLane' : 'unique', 'tollStationKey' : 'unique', 
@@ -366,7 +370,7 @@ if __name__ == '__main__':
     flere['tollStationKey']       = flere['tollStationKey'].apply( lambda x : ','.join( [ str(y) for y in x ] )  )
     flere['tollStationDirection'] = flere['tollStationDirection'].apply( lambda x : ','.join( [ str(y) for y in x ] )  )
     
-    # nvdbgeotricks.skrivexcel( 'flertydigkobling.xlsx', flere )
+    # nvdbgeotricks.skrivexcel( mappe + 'flertydigkobling.xlsx', flere )
 
     # Er det noen APAR-data som ikke er koblet mot NVDB? 
     apar_koblede = list( merged['tollStationKey'].unique() ) + list( flertydig['tollStationKey'].unique() )
@@ -418,10 +422,10 @@ if __name__ == '__main__':
     takstavvik_geom = takstavvik.copy()
     takstavvik_geom['geometry'] = takstavvik_geom['geometri'].apply( wkt.loads )
     takstavvik_geom = gpd.GeoDataFrame( takstavvik_geom, geometry='geometry' )
-    takstavvik_geom[ mergedcols + ['geometry'] ].to_file( 'takstavvik.gpkg')
+    takstavvik_geom[ mergedcols + ['geometry'] ].to_file(  mappe + 'takstavvik.gpkg')
 
 
-    nvdbgeotricks.skrivexcel( 'koblingNvdbAutopass.xlsx', 
+    nvdbgeotricks.skrivexcel( mappe +  'koblingNvdbAutopass.xlsx', 
                           [ merged[mergedcols], flere, apar_utenkobling_medpris[aparcols], nvdb_utenkobling[nvdbCol],  apar_utenpris[aparcols], nvdbBomst[stedfestingQAcol], takstavvik[mergedcols] ], 
         sheet_nameListe = ['Enkel kobling', 'Flertydig kobling', 'APAR uten kobling', 'Nvdb uten kobling', 'inaktive Apar', 'NVDB stedfesting QA', 'Takst avvik'] )
     
@@ -514,10 +518,10 @@ if __name__ == '__main__':
                  'operatorId', 'tollStationKey', 'projectNumber',
                 'projectName', 'tollStationCode', 'geometry']
     
-    nvdbBomst2[ nvdbCol2 ].to_file( 'nyApardump.gpkg', layer='nvdb bomstasjon', driver='GPKG')
-    aparRediger[ aparCol2].to_file( 'nyApardump.gpkg', layer='apar bomstasjon felt', driver='GPKG')
+    nvdbBomst2[ nvdbCol2 ].to_file( mappe + 'nyApardump.gpkg', layer='nvdb bomstasjon', driver='GPKG')
+    aparRediger[ aparCol2].to_file( mappe + 'nyApardump.gpkg', layer='apar bomstasjon felt', driver='GPKG')
 
     # Sammenligner takster til sist
 
-    lagEndringssett( merged, outfile='bomstasjon_endringssett.json' )
+    lagEndringssett( merged, outfile=mappe+'bomstasjon_endringssett.json' )
     print( f"Tidsbruk: {datetime.now()-t0}")
