@@ -220,11 +220,11 @@ def lagEndringssett( myDataFrame, outfile='bomstasjon_endringssett.json' ):
             delvisOppdater.append( oppdaterObj )
 
 
-    if len( delvisOppdater ) > 0: 
-        skrivemal =  skrivnvdb.endringssett_mal()
-        skrivemal['delvisOppdater']['vegobjekter'] = delvisOppdater
-        with open( outfile, 'w') as f: 
-            json.dump( skrivemal, f, indent=4, ensure_ascii=False )       
+    # if len( delvisOppdater ) > 0: 
+    skrivemal =  skrivnvdb.endringssett_mal()
+    skrivemal['delvisOppdater']['vegobjekter'] = delvisOppdater
+    with open( outfile, 'w') as f: 
+        json.dump( skrivemal, f, indent=4, ensure_ascii=False )       
 
 
 #    takstCol = [ 'Takst liten bil', 'Takst stor bil', 'Rushtidstakst liten bil', 'Rushtidstakst stor bil',         
