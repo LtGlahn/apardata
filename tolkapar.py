@@ -480,7 +480,11 @@ if __name__ == '__main__':
                 data['geometry'] = Point( X, Y)
             else:
                 print(f"Mangler geometri for APAR-oppføring {data['tollStationName']} {data['tollStationKey']} ")
-                data['geometry'] = wkt.loads( nvdb.iloc[0]['geometri'] ) 
+                if len(  nvdb ) > 0: 
+                    data['geometry'] = wkt.loads( nvdb.iloc[0]['geometri'] ) 
+                else: 
+                    print( f"Konstruerer fiktiv geometri for APAR-opføring  {data['tollStationName']} {data['tollStationKey']}")
+                    data['geometry'] = wkt.loads( 'POINT( 144400 7189000)' ) 
 
             myList.append( data )
 
