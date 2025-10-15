@@ -18,7 +18,7 @@ import STARTHER
 # if not [ k for k in sys.path if 'nvdbapi' in k]:
 #     print( "Adding NVDB api library to python search path")
 #     sys.path.append( '/mnt/c/data/leveranser/nvdbapi-V4' )
-import nvdbapiv3 
+import nvdbapiv4 
 import skrivnvdb
 import nvdbgeotricks
 
