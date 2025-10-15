@@ -17,7 +17,7 @@ import STARTHER
 
 # if not [ k for k in sys.path if 'nvdbapi' in k]:
 #     print( "Adding NVDB api library to python search path")
-#     sys.path.append( '/mnt/c/data/leveranser/nvdbapi-V4' )
+#     sys.path.append( '/mnt/c/data/leveranser/nvdbapi-V3' )
 import nvdbapiv3 
 import skrivnvdb
 import nvdbgeotricks
@@ -76,7 +76,7 @@ def hentFeltPunkt( stedfesting ):
     pos, vid = stedfesting.split( '@' )
     pos = float( pos )
     
-    r = requests.get( 'https://nvdbapiles.atlas.vegvesen.no/vegnett/veglenkesekvenser/segmentert/' + \
+    r = requests.get( 'https://nvdbapiles-v3.atlas.vegvesen.no/vegnett/veglenkesekvenser/segmentert/' + \
                     vid + '.json' )
     feltoversikt = ''
     if r.ok: 
@@ -480,11 +480,7 @@ if __name__ == '__main__':
                 data['geometry'] = Point( X, Y)
             else:
                 print(f"Mangler geometri for APAR-oppføring {data['tollStationName']} {data['tollStationKey']} ")
-                if len(  nvdb ) > 0: 
-                    data['geometry'] = wkt.loads( nvdb.iloc[0]['geometri'] ) 
-                else: 
-                    print( f"Konstruerer fiktiv geometri for APAR-opføring  {data['tollStationName']} {data['tollStationKey']}")
-                    data['geometry'] = wkt.loads( 'POINT( 144400 7189000)' ) 
+                data['geometry'] = wkt.loads( nvdb.iloc[0]['geometri'] ) 
 
             myList.append( data )
 
@@ -525,23 +521,7 @@ if __name__ == '__main__':
     nvdbBomst2[ nvdbCol2 ].to_file( mappe + 'nyApardump.gpkg', layer='nvdb bomstasjon', driver='GPKG')
     aparRediger[ aparCol2].to_file( mappe + 'nyApardump.gpkg', layer='apar bomstasjon felt', driver='GPKG')
 
-    # for flertydige stasjoner - sjekker at vi har entydige TAKSTER. Dvs at alle NVDB ID har samme apartakst. 
-    # Utnytter .duplicated-funksjonalitet, som skal gi samme svar for nvdbId alene og nvdbID med apartakst-kolonnene 
-    testCol = ['nvdbId',  'APAR takst liten bil', 'APAR takst stor bensinbil', 'APAR Rustid takst liten bil', 'APAR Rustid takst stor bensinbil' ]
-    if len(  flertydig[flertydig.duplicated( subset=testCol)] ) == len(  flertydig[flertydig.duplicated( subset='nvdbId')] ): 
-        # GODKJENT
-        sjekkTakster = pd.concat( [ flertydig[flertydig.duplicated( subset=testCol)], merged], ignore_index=True ) 
-
-    else: 
-        sjekkTakster = merged 
-        print( f"Feil for nvdb-duplikater! Har variasjon i APAR-takster for en og samme nvdbId")
-
-    # UNNTAKSLISTE #  Oddernesbrua KRS, som ikke her ferdig før ca Mai 2025 
-    unntak = [1022267972, 1022273618]
-    sjekkTakster = sjekkTakster[ ~sjekkTakster['nvdbId'].isin( unntak )]
-    print( f"UNNTAK - fjern cirka mai 2025: Hopper over takstinformasjon for Oppdernesbrua KRS NDB ID {unntak}")
-    
     # Sammenligner takster til sist
 
-    lagEndringssett( sjekkTakster, outfile=mappe+'bomstasjon_endringssett.json' )
+    lagEndringssett( merged, outfile=mappe+'bomstasjon_endringssett.json' )
     print( f"Tidsbruk: {datetime.now()-t0}")

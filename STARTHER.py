@@ -2,7 +2,7 @@
 """
 Setter opp søkestien slik at du finner NVDB-api funksjonene 
 Last ned dette reposet
-https://github.com/LtGlahn/nvdbapi-V3 
+https://github.com/LtGlahn/nvdbapi-V4
 og hardkod inn plasseringen 
 
 """
@@ -12,8 +12,8 @@ import os
 
 if not [ k for k in sys.path if 'nvdbapi' in k]: 
     print( "Legger NVDB api til søkestien")
-    sys.path.append( '/mnt/c/data/leveranser/nvdbapi-V3' )
-    # sys.path.append( '/home/jajens/produksjon/nvdbapi-V3' )
+    sys.path.append( '/mnt/c/data/leveranser/nvdbapi-V4' )
+    # sys.path.append( '/home/jajens/produksjon/nvdbapi-V4' )
 
 if not [ k for k in sys.path if 'ruteplan' in k]: 
     print( "Legger ruteplan api til søkestien")
