@@ -254,7 +254,7 @@ if __name__ == '__main__':
     # nvdbJson = nvdbapiv3.nvdbFagdata(45).to_records() 
     # with open( 'nvdbdump.json', 'w') as f: 
     #     json.dump( nvdbJson, f, indent=4, ensure_ascii=False )
-    nvdbAlle = pd.DataFrame( nvdbapiv3.nvdbFagdata(45).to_records( relasjoner=False ) )
+    nvdbAlle = pd.DataFrame( nvdbapiv4.nvdbFagdata(45).to_records( relasjoner=False ) )
     nvdbAlle['stedfest'] = nvdbAlle['relativPosisjon'].astype(str) + '@' + nvdbAlle['veglenkesekvensid'].astype(str)
     nvdbAlle['tilgjengeligeKjfelt'] = nvdbAlle['stedfest'].apply( hentFeltPunkt )
 
@@ -454,8 +454,11 @@ if __name__ == '__main__':
             nvdbId = nvdb.iloc[0]['nvdbId']
             navn   = nvdb.iloc[0]['Navn bomstasjon']
         else: 
-            nvdbId = -1 
-            navn  = f"Flere NVDB bomstasjoner: {','.join( nvdb['Navn bomstasjon'].to_list() )}"
+            nvdbId = -1
+            tmpNavneliste = nvdb.loc[ ~nvdb['Navn bomstasjon'].isnull() ]['Navn bomstasjon'].to_list()
+
+            navn  = f"Flere NVDB bomstasjoner: {','.join(tmpNavneliste)"
+            # nvdb.loc[ ~nvdb['Navn bomstasjon'].isnull() ]['Navn bomstasjon'].to_list()
 
         print( f"Analyserer NVDB bomstasjoner: {navn}")
 
