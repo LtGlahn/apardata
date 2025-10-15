@@ -457,7 +457,7 @@ if __name__ == '__main__':
             nvdbId = -1
             tmpNavneliste = nvdb.loc[ ~nvdb['Navn bomstasjon'].isnull() ]['Navn bomstasjon'].to_list()
 
-            navn  = f"Flere NVDB bomstasjoner: {','.join(tmpNavneliste)"
+            navn  = f"Flere NVDB bomstasjoner: ','.join(tmpNavneliste)"
             # nvdb.loc[ ~nvdb['Navn bomstasjon'].isnull() ]['Navn bomstasjon'].to_list()
 
         print( f"Analyserer NVDB bomstasjoner: {navn}")
