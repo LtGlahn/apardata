@@ -17,7 +17,7 @@ import STARTHER
 
 # if not [ k for k in sys.path if 'nvdbapi' in k]:
 #     print( "Adding NVDB api library to python search path")
-#     sys.path.append( '/home/jajens/produksjon/nvdbapiv4' )
+# sys.path.append( '/home/jajens/produksjon/nvdbapiv4' )
 import nvdbapiv4 
 import skrivnvdb
 import nvdbgeotricks
@@ -238,6 +238,7 @@ if __name__ == '__main__':
 
     mappe = './' 
     mappe = '/var/www/html/apardata/' 
+    mappe = '/mnt/c/DATA/leveranser/apardata/' 
 
     with open(  mappe +  'apardump.json') as f: 
     # with open( 'takstendringMai2024/endret_bomstasjoner_sisteuker20240527.json') as f: 
@@ -254,7 +255,7 @@ if __name__ == '__main__':
     # nvdbJson = nvdbapiv3.nvdbFagdata(45).to_records() 
     # with open( 'nvdbdump.json', 'w') as f: 
     #     json.dump( nvdbJson, f, indent=4, ensure_ascii=False )
-    nvdbAlle = pd.DataFrame( nvdbapiv4.nvdbFagdata(45).to_records( relasjoner=False ) )
+    nvdbAlle = pd.DataFrame( nvdbapiv4.nvdbFagdata(45, debug=True ).to_records( relasjoner=False ) )
     nvdbAlle['stedfest'] = nvdbAlle['relativPosisjon'].astype(str) + '@' + nvdbAlle['veglenkesekvensid'].astype(str)
     nvdbAlle['tilgjengeligeKjfelt'] = nvdbAlle['stedfest'].apply( hentFeltPunkt )
 

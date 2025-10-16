@@ -12,8 +12,8 @@ import os
 
 if not [ k for k in sys.path if 'nvdbapi' in k]: 
     print( "Legger NVDB api til søkestien")
-    sys.path.append( '/mnt/c/data/leveranser/nvdbapi-V4' )
-    # sys.path.append( '/home/jajens/produksjon/nvdbapi-V4' )
+    sys.path.append( '/mnt/c/data/leveranser/nvdbapiV4' )
+    # sys.path.append( '/home/jajens/produksjon/nvdbapiV4' )
 
 if not [ k for k in sys.path if 'ruteplan' in k]: 
     print( "Legger ruteplan api til søkestien")
